@@ -4,11 +4,13 @@ import * as actionCreators from './store/actionCreators.js';
 import RecommendList from '../../components/list/index';
 import Slider from '../../components/slider';
 import Scroll from '../../components/scroll';
+import { forceCheck } from 'react-lazyload';
 import { Content } from './style.js';
+import Loading from '../../baseUI/loading/index';
 
 function Recommend (props) {
 
-  const { bannerList, recommendList } = props
+  const { bannerList, recommendList, enterLoading } = props
 
   const { getBannerDataDispatch, getRecommendListDataDispatch } = props
 
@@ -17,19 +19,25 @@ function Recommend (props) {
   const recommendListJS = recommendList ? recommendList.toJS() : []
 
   useEffect(() => {
-    getBannerDataDispatch()
-    getRecommendListDataDispatch()
+    // redux中如果有数据，则不发请求
+    if (!bannerList.size) {
+      getBannerDataDispatch()
+    }
+    if (!recommendList.size) {
+      getRecommendListDataDispatch()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
     <Content>
-      <Scroll className="list">
+      <Scroll className="list" onScroll={forceCheck}>
         <div>
           <Slider bannerList={bannerListJS}></Slider>
           <RecommendList recommendList={recommendListJS}></RecommendList>
         </div>
       </Scroll>
+      {enterLoading ? <Loading></Loading> : null}
     </Content>
   )
 }
@@ -39,7 +47,8 @@ const mapStateToProps = (state) => ({
   // 不要在这里将数据toJS
   // 然每次 diff 比对 props 的时候都是不一样的引用，还是导致不必要的重渲染，属于滥用 immutable
   bannerList: state.recommend.get('bannerList'),
-  recommendList: state.recommend.get('recommendList')
+  recommendList: state.recommend.get('recommendList'),
+  enterLoading: state.recommend.get('enterLoading')
 })
 
 // 映射dispatch到props上
