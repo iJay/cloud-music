@@ -1,7 +1,7 @@
-import reducer from "./reducer";
+import recommendReducer from "./reducer";
 import * as actionCreators from "./actionCreators";
 
 export {
-  reducer,
+  recommendReducer,
   actionCreators
 }

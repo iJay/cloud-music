@@ -1,7 +1,10 @@
-import { forwardRef, useState, useRef, useEffect, useImperativeHandle } from 'react'
+import { forwardRef, useState, useRef, useEffect, useImperativeHandle, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import BScroll from 'better-scroll'
-import ScrollContainer from './style'
+import { ScrollContainer, PullDownLoading, PullUpLoading} from './style'
+import Loading from '../../baseUI/loading/index'
+import LoadingV2 from '../../baseUI/loading-v2/index'
+import { debounce } from '../../utils/index'
 
 const Scroll = forwardRef ((props, ref) => {
   const [bsScroll, setBsScroll] = useState(null)
@@ -35,6 +38,14 @@ const Scroll = forwardRef ((props, ref) => {
     }
   })
 
+  const pullUpDebounce = useMemo(() => {
+    return debounce(pullUp, 300)
+  }, [pullUp])
+
+  const pullDownDebounce = useMemo(() => {
+    return debounce(pullDown, 300)
+  }, [pullDown])
+
   // 绑定scroll事件
   useEffect(() => {
     if (!onScroll || !bsScroll) return
@@ -49,28 +60,32 @@ const Scroll = forwardRef ((props, ref) => {
   // 判断是否滑动到了底部
   useEffect(() => {
     if (!bsScroll || !pullUp) return
-    bsScroll.on('scrollEnd', () => {
-      if (bsScroll.y <= bsScroll.maxScrollY + 100) {
-        pullUp()
+    const handlePullUp = () => {
+      //判断是否滑动到了底部
+      if(bsScroll.y <= bsScroll.maxScrollY + 100){
+        pullUpDebounce();
       }
-    })
-    return () => {
-      bsScroll.off('scrollEnd')
     }
-  }, [bsScroll, pullUp])
+    bsScroll.on('scrollEnd', handlePullUp)
+    return () => {
+      bsScroll.off('scrollEnd', handlePullUp)
+    }
+  }, [bsScroll, pullUp, pullUpDebounce])
 
   // 判断用户的下拉动作
   useEffect(() => {
-    if (!bsScroll || !pullUp) return
-    bsScroll.on('touchEnd', (pos) => {
-      if (pos.y > 50) {
-        pullDown()
+    if (!bsScroll || !pullDown) return
+    const handlePullDown = (pos) => {
+      //判断用户的下拉动作
+      if(pos.y > 50) {
+        pullDownDebounce();
       }
-      return () => {
-        bsScroll.off('touchEnd')
-      }
-    })
-  }, [bsScroll, pullDown, pullUp])
+    }
+    bsScroll.on('touchEnd', handlePullDown)
+    return () => {
+      bsScroll.off('touchEnd', handlePullDown)
+    }
+  }, [bsScroll, pullDown, pullDownDebounce])
 
   useImperativeHandle(ref, () => ({
     // 给外界暴露 getBScroll 方法，提供 bs 实例
@@ -89,9 +104,15 @@ const Scroll = forwardRef ((props, ref) => {
     }
   }))
 
+  const PullUpdisplayStyle = pullUpLoading ? {display: ""} : { display:"none" };
+  const PullDowndisplayStyle = pullDownLoading ? { display: ""} : { display:"none" };
   return (
     <ScrollContainer ref={ scrollContaninerRef }>
       { props.children }
+      {/* 滑到底部加载动画 */}
+      <PullUpLoading style={ PullUpdisplayStyle }><Loading></Loading></PullUpLoading>
+      {/* 顶部下拉刷新动画 */}
+      <PullDownLoading style={ PullDowndisplayStyle }><LoadingV2></LoadingV2></PullDownLoading>
     </ScrollContainer>
   )
 })
